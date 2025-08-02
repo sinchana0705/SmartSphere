@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home Manager - Enhanced</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: radial-gradient(circle at 20% 50%, rgba(0, 255, 200, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(0, 200, 255, 0.08) 0%, transparent 50%),
+                        #0a0a0a;
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            font-weight: 300;
+            background: linear-gradient(135deg, #00ffc8, #00ccff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            letter-spacing: -0.02em;
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.1rem;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(0, 255, 200, 0.3);
+            box-shadow: 0 20px 40px rgba(0, 255, 200, 0.1);
+        }
+
+        .card-wide {
+            grid-column: 1 / -1;
+        }
+
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #00ffc8;
+        }
+
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+        }
+
+        .sensor-item {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .sensor-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #00ffc8;
+            margin-bottom: 5px;
+        }
+
+        .sensor-label {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .room-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .led-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .room-item, .led-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .room-item:hover, .led-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .room-name, .led-name {
+            font-weight: 500;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: linear-gradient(135deg, #00ffc8, #00ccff);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: white;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(24px);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .chart-btn {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .chart-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .chart-btn.active {
+            background: linear-gradient(135deg, #00ffc8, #00ccff);
+            border-color: transparent;
+        }
+
+        .climate-controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .climate-btn {
+            flex: 1;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .climate-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .climate-btn.active {
+            background: linear-gradient(135deg, #00ffc8, #00ccff);
+            border-color: transparent;
+        }
+
+        .automation-controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .auto-toggle {
+            flex: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff4444;
+            margin-left: 10px;
+        }
+
+        .status-indicator.safe {
+            background: #00ff88;
+        }
+
+        .status-indicator.warning {
+            background: #ffaa00;
+            animation: pulse 2s infinite;
+        }
+
+        .blinking {
+            animation: blink 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        .temperature-alert {
+            background: rgba(255, 170, 0, 0.2);
+            border-color: rgba(255, 170, 0, 0.5);
+        }
+
+        .temperature-normal {
+            background: rgba(0, 255, 136, 0.1);
+            border-color: rgba(0, 255, 136, 0.3);
+        }
+
+        .voice-assistant {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #00ffc8, #00ccff);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0, 255, 200, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .voice-assistant:hover {
+            transform: scale(1.1);
+            box-shadow: 0 15px 40px rgba(0, 255, 200, 0.4);
+        }
+
+        .voice-assistant svg {
+            width: 24px;
+            height: 24px;
+            fill: #0a0a0a;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .connection-status.connected {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+
+        .connection-status.disconnected {
+            background: rgba(255, 68, 68, 0.2);
+            color: #ff4444;
+            border: 1px solid rgba(255, 68, 68, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5rem;
+            }
+            
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .sensor-grid,
+            .room-grid,
+            .led-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-container {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status" id="connectionStatus">
+        Connecting...
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Enhanced Smart Home</h1>
+            <p>Control your smart home with real-time monitoring and LED controls</p>
+        </div>
+
+        <div class="dashboard">
+            <!-- Sensors Card -->
+            <div class="card">
+                <div class="card-title">Environmental Sensors</div>
+                <div class="sensor-grid">
+                    <div class="sensor-item" id="tempCard">
+                        <div class="sensor-value" id="temperature">--°C</div>
+                        <div class="sensor-label">Temperature</div>
+                    </div>
+                    <div class="sensor-item">
+                        <div class="sensor-value" id="humidity">--%</div>
+                        <div class="sensor-label">Humidity</div>
+                    </div>
+                    <div class="sensor-item">
+                        <div class="sensor-value" id="lightLevel">--</div>
+                        <div class="sensor-label">Light Level</div>
+                    </div>
+                    <div class="sensor-item">
+                        <div class="sensor-value" id="gasLevel">--</div>
+                        <div class="sensor-label">Gas Level</div>
+                        <div class="status-indicator" id="gasStatus"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Room Lighting Card -->
+            <div class="card">
+                <div class="card-title">Room Lighting</div>
+                <div class="room-grid">
+                    <div class="room-item">
+                        <span class="room-name">Living Room</span>
+                        <div class="toggle-switch" data-room="living" id="livingToggle"></div>
+                    </div>
+                    <div class="room-item">
+                        <span class="room-name">Bedroom</span>
+                        <div class="toggle-switch" data-room="bedroom" id="bedroomToggle"></div>
+                    </div>
+                    <div class="room-item">
+                        <span class="room-name">Kitchen</span>
+                        <div class="toggle-switch" data-room="kitchen" id="kitchenToggle"></div>
+                    </div>
+                    <div class="room-item">
+                        <span class="room-name">Bathroom</span>
+                        <div class="toggle-switch" data-room="bathroom" id="bathroomToggle"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LED Control Card -->
+            <div class="card">
+                <div class="card-title">LED Controls (A2-A5)</div>
+                <div class="led-grid">
+                    <div class="led-item">
+                        <span class="led-name">LED A2</span>
+                        <div class="toggle-switch" data-led="A2" id="ledA2Toggle"></div>
+                    </div>
+                    <div class="led-item">
+                        <span class="led-name">LED A3</span>
+                        <div class="toggle-switch" data-led="A3" id="ledA3Toggle"></div>
+                    </div>
+                    <div class="led-item">
+                        <span class="led-name">LED A4</span>
+                        <div class="toggle-switch" data-led="A4" id="ledA4Toggle"></div>
+                    </div>
+                    <div class="led-item">
+                        <span class="led-name">LED A5</span>
+                        <div class="toggle-switch" data-led="A5" id="ledA5Toggle"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Climate Control Card -->
+            <div class="card">
+                <div class="card-title">Climate Control</div>
+                <div class="climate-controls">
+                    <button class="climate-btn" data-device="fan" id="fanBtn">
+                        Fan: OFF
+                    </button>
+                    <button class="climate-btn" data-device="ac" id="acBtn">
+                        AC: OFF
+                    </button>
+                </div>
+            </div>
+
+            <!-- Automation Card -->
+            <div class="card">
+                <div class="card-title">Automation Settings</div>
+                <div class="automation-controls">
+                    <div class="auto-toggle" data-auto="light" id="autoLightToggle">
+                        <span>Auto Lighting</span>
+                        <div class="toggle-switch" id="autoLightSwitch"></div>
+                    </div>
+                    <div class="auto-toggle" data-auto="temp" id="autoTempToggle">
+                        <span>Auto Climate</span>
+                        <div class="toggle-switch" id="autoTempSwitch"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Card -->
+            <div class="card">
+                <div class="card-title">Security Status</div>
+                <div class="sensor-item">
+                    <div class="sensor-value" id="motionStatus">No Motion</div>
+                    <div class="sensor-label">Motion Detection</div>
+                </div>
+                <div class="sensor-item" style="margin-top: 15px;">
+                    <div class="sensor-value" id="alarmStatus">Safe</div>
+                    <div class="sensor-label">Security Alarm</div>
+                    <div class="status-indicator safe" id="alarmIndicator"></div>
+                </div>
+            </div>
+
+            <!-- Sensor Graphs Card -->
+            <div class="card card-wide">
+                <div class="card-title">Real-time Sensor Data</div>
+                <div class="chart-controls">
+                    <button class="chart-btn active" data-sensor="all">All Sensors</button>
+                    <button class="chart-btn" data-sensor="temperature">Temperature</button>
+                    <button class="chart-btn" data-sensor="humidity">Humidity</button>
+                    <button class="chart-btn" data-sensor="light">Light Level</button>
+                    <button class="chart-btn" data-sensor="gas">Gas Level</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="sensorChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="voice-assistant" id="voiceBtn">
+        <svg viewBox="0 0 24 24">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        </svg>
+    </div>
+
+    <script>
+        class EnhancedSmartHomeController {
+            constructor() {
+                this.wsUrl = 'ws://localhost:8080';
+                this.ws = null;
+                this.reconnectInterval = 3000;
+                this.isConnected = false;
+                
+                // Chart data storage
+                this.sensorData = {
+                    temperature: [],
+                    humidity: [],
+                    light: [],
+                    gas: [],
+                    timestamps: []
+                };
+                this.maxDataPoints = 20;
+                
+                // Temperature monitoring
+                this.currentTemp = null;
+                this.tempAlertState = false;
+                
+                this.initializeChart();
+                this.initializeEventListeners();
+                this.connect();
+            }
+
+            connect() {
+                try {
+                    this.ws = new WebSocket(this.wsUrl);
+                    
+                    this.ws.onopen = () => {
+                        console.log('Connected to smart home system');
+                        this.isConnected = true;
+                        this.updateConnectionStatus(true);
+                    };
+
+                    this.ws.onmessage = (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            this.updateUI(data);
+                            this.updateChartData(data);
+                            this.checkTemperatureAlert(data.temperature);
+                        } catch (e) {
+                            console.error('Error parsing data:', e);
+                        }
+                    };
+
+                    this.ws.onclose = () => {
+                        console.log('Disconnected from smart home system');
+                        this.isConnected = false;
+                        this.updateConnectionStatus(false);
+                        setTimeout(() => this.connect(), this.reconnectInterval);
+                    };
+
+                    this.ws.onerror = (error) => {
+                        console.error('WebSocket error:', error);
+                    };
+                } catch (error) {
+                    console.error('Connection error:', error);
+                    setTimeout(() => this.connect(), this.reconnectInterval);
+                }
+            }
+
+            sendCommand(command) {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify({ command }));
+                    console.log('Sent command:', command);
+                } else {
+                    console.warn('WebSocket not connected');
+                }
+            }
+
+            updateConnectionStatus(connected) {
+                const statusEl = document.getElementById('connectionStatus');
+                if (connected) {
+                    statusEl.textContent = 'Connected';
+                    statusEl.className = 'connection-status connected';
+                } else {
+                    statusEl.textContent = 'Disconnected';
+                    statusEl.className = 'connection-status disconnected';
+                }
+            }
+
+            updateUI(data) {
+                // Update sensors
+                document.getElementById('temperature').textContent = 
+                    data.temperature ? `${data.temperature}°C` : '--°C';
+                document.getElementById('humidity').textContent = 
+                    data.humidity ? `${data.humidity}%` : '--%';
+                document.getElementById('lightLevel').textContent = data.ldr || '--';
+                document.getElementById('gasLevel').textContent = data.gas || '--';
+
+                // Update gas status indicator
+                const gasIndicator = document.getElementById('gasStatus');
+                if (data.gas > 400) {
+                    gasIndicator.className = 'status-indicator warning';
+                } else {
+                    gasIndicator.className = 'status-indicator safe';
+                }
+
+                // Update room lights
+                this.updateToggle('livingToggle', data.livingRoom);
+                this.updateToggle('bedroomToggle', data.bedroom);
+                this.updateToggle('kitchenToggle', data.kitchen);
+                this.updateToggle('bathroomToggle', data.bathroom);
+
+                // Update LED controls
+                this.updateToggle('ledA2Toggle', data.ledA2);
+                this.updateToggle('ledA3Toggle', data.ledA3);
+                this.updateToggle('ledA4Toggle', data.ledA4);
+                this.updateToggle('ledA5Toggle', data.ledA5);
+
+                // Update climate controls
+                this.updateClimateButton('fanBtn', 'Fan', data.fan);
+                this.updateClimateButton('acBtn', 'AC', data.ac);
+
+                // Update automation toggles
+                this.updateToggle('autoLightSwitch', data.autoLight);
+                this.updateToggle('autoTempSwitch', data.autoTemp);
+
+                // Update security status
+                document.getElementById('motionStatus').textContent = 
+                    data.motion ? 'Motion Detected' : 'No Motion';
+                
+                const alarmStatus = document.getElementById('alarmStatus');
+                const alarmIndicator = document.getElementById('alarmIndicator');
+                if (data.alarm) {
+                    alarmStatus.textContent = 'ALARM!';
+                    alarmIndicator.className = 'status-indicator warning';
+                } else {
+                    alarmStatus.textContent = 'Safe';
+                    alarmIndicator.className = 'status-indicator safe';
+                }
+            }
+
+            updateToggle(elementId, state) {
+                const toggle = document.getElementById(elementId);
+                if (toggle) {
+                    if (state) {
+                        toggle.classList.add('active');
+                    } else {
+                        toggle.classList.remove('active');
+                    }
+                }
+            }
+
+            updateClimateButton(elementId, device, state) {
+                const btn = document.getElementById(elementId);
+                btn.textContent = `${device}: ${state ? 'ON' : 'OFF'}`;
+                if (state) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            }
+
+            checkTemperatureAlert(temperature) {
+                if (temperature === null || temperature === undefined) return;
+                
+                this.currentTemp = temperature;
+                const isAlert = temperature < 23 || temperature > 26;
+                
+                if (isAlert !== this.tempAlertState) {
+                    this.tempAlertState = isAlert;
+                    const tempCard = document.getElementById('tempCard');
+                    const ledA2Toggle = document.getElementById('ledA2Toggle');
+                    const ledA3Toggle = document.getElementById('ledA3Toggle');
+                    
+                    if (isAlert) {
+                        tempCard.classList.add('temperature-alert', 'blinking');
+                        tempCard.classList.remove('temperature-normal');
+                        
+                        // Make LED A2 and A3 blink by adding blinking class
+                        if (ledA2Toggle) ledA2Toggle.classList.add('blinking');
+                        if (ledA3Toggle) ledA3Toggle.classList.add('blinking');
+                        
+                        // Send command to Arduino to start blinking LEDs
+                        this.sendCommand('TEMP_ALERT_ON');
+                    } else {
+                        tempCard.classList.remove('temperature-alert', 'blinking');
+                        tempCard.classList.add('temperature-normal');
+                        
+                        // Remove blinking from LEDs
+                        if (ledA2Toggle) ledA2Toggle.classList.remove('blinking');
+                        if (ledA3Toggle) ledA3Toggle.classList.remove('blinking');
+                        
+                        // Send command to Arduino to stop blinking LEDs
+                        this.sendCommand('TEMP_ALERT_OFF');
+                    }
+                }
+            }
+
+            initializeChart() {
+                const ctx = document.getElementById('sensorChart').getContext('2d');
+                this.chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            {
+                                label: 'Temperature (°C)',
+                                data: [],
+                                borderColor: '#ff6b6b',
+                                backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                                tension: 0.4,
+                                fill: false
+                            },
+                            {
+                                label: 'Humidity (%)',
+                                data: [],
+                                borderColor: '#4ecdc4',
+                                backgroundColor: 'rgba(78, 205, 196, 0.1)',
+                                tension: 0.4,
+                                fill: false
+                            },
+                            {
+                                label: 'Light Level',
+                                data: [],
+                                borderColor: '#ffe66d',
+                                backgroundColor: 'rgba(255, 230, 109, 0.1)',
+                                tension: 0.4,
+                                fill: false
+                            },
+                            {
+                                label: 'Gas Level',
+                                data: [],
+                                borderColor: '#ff8b94',
+                                backgroundColor: 'rgba(255, 139, 148, 0.1)',
+                                tension: 0.4,
+                                fill: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: 'rgba(255, 255, 255, 0.8)'
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: 'rgba(255, 255, 255, 0.6)'
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            },
+                            y: {
+                                ticks: {
+                                    color: 'rgba(255, 255, 255, 0.6)'
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            }
+                        },
+                        animation: {
+                            duration: 750
+                        }
+                    }
+                });
+            }
+
+            updateChartData(data) {
+                const now = new Date().toLocaleTimeString();
+                
+                // Add new data points
+                this.sensorData.timestamps.push(now);
+                this.sensorData.temperature.push(data.temperature || 0);
+                this.sensorData.humidity.push(data.humidity || 0);
+                this.sensorData.light.push(data.ldr || 0);
+                this.sensorData.gas.push(data.gas || 0);
+                
+                // Keep only last maxDataPoints
+                if (this.sensorData.timestamps.length > this.maxDataPoints) {
+                    this.sensorData.timestamps.shift();
+                    this.sensorData.temperature.shift();
+                    this.sensorData.humidity.shift();
+                    this.sensorData.light.shift();
+                    this.sensorData.gas.shift();
+                }
+                
+                // Update chart
+                this.chart.data.labels = this.sensorData.timestamps;
+                this.chart.data.datasets[0].data = this.sensorData.temperature;
+                this.chart.data.datasets[1].data = this.sensorData.humidity;
+                this.chart.data.datasets[2].data = this.sensorData.light;
+                this.chart.data.datasets[3].data = this.sensorData.gas;
+                
+                this.chart.update('none');
+            }
+
+            updateChartVisibility(sensorType) {
+                const datasets = this.chart.data.datasets;
+                
+                if (sensorType === 'all') {
+                    datasets.forEach(dataset => dataset.hidden = false);
+                } else {
+                    datasets.forEach((dataset, index) => {
+                        switch (sensorType) {
+                            case 'temperature':
+                                dataset.hidden = index !== 0;
+                                break;
+                            case 'humidity':
+                                dataset.hidden = index !== 1;
+                                break;
+                            case 'light':
+                                dataset.hidden = index !== 2;
+                                break;
+                            case 'gas':
+                                dataset.hidden = index !== 3;
+                                break;
+                        }
+                    });
+                }
+                
+                this.chart.update();
+            }
+
+            initializeEventListeners() {
+                // Room lighting toggles
+                document.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('toggle-switch') && e.target.dataset.room) {
+                        const room = e.target.dataset.room;
+                        const isActive = e.target.classList.contains('active');
+                        const command = `${room.toUpperCase()}_${isActive ? 'OFF' : 'ON'}`;
+                        this.sendCommand(command);
+                    }
+
+                    // LED controls
+                    if (e.target.classList.contains('toggle-switch') && e.target.dataset.led) {
+                        const led = e.target.dataset.led;
+                        const isActive = e.target.classList.contains('active');
+                        const command = `LED_${led}_${isActive ? 'OFF' : 'ON'}`;
+                        this.sendCommand(command);
+                    }
+
+                    // Climate controls
+                    if (e.target.classList.contains('climate-btn')) {
+                        const device = e.target.dataset.device;
+                        const isActive = e.target.classList.contains('active');
+                        const command = `${device.toUpperCase()}_${isActive ? 'OFF' : 'ON'}`;
+                        this.sendCommand(command);
+                    }
+
+                    // Automation toggles
+                    if (e.target.closest('.auto-toggle')) {
+                        const autoType = e.target.closest('.auto-toggle').dataset.auto;
+                        const command = `AUTO_${autoType.toUpperCase()}_TOGGLE`;
+                        this.sendCommand(command);
+                    }
+
+                    // Chart controls
+                    if (e.target.classList.contains('chart-btn')) {
+                        // Remove active class from all chart buttons
+                        document.querySelectorAll('.chart-btn').forEach(btn => btn.classList.remove('active'));
+                        // Add active class to clicked button
+                        e.target.classList.add('active');
+                        // Update chart visibility
+                        const sensorType = e.target.dataset.sensor;
+                        this.updateChartVisibility(sensorType);
+                    }
+
+                    // Voice assistant (placeholder)
+                    if (e.target.closest('#voiceBtn')) {
+                        this.handleVoiceCommand();
+                    }
+                });
+            }
+
+            handleVoiceCommand() {
+                // Voice command placeholder - would integrate with speech recognition
+                const commands = [
+                    'LIVING_ON', 'LIVING_OFF', 'ALL_LIGHTS_OFF', 
+                    'FAN_ON', 'AC_ON', 'ALL_OFF', 'LED_A2_ON', 'LED_A3_OFF'
+                ];
+                const randomCommand = commands[Math.floor(Math.random() * commands.length)];
+                this.sendCommand(randomCommand);
+                
+                // Visual feedback
+                const voiceBtn = document.getElementById('voiceBtn');
+                voiceBtn.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    voiceBtn.style.transform = 'scale(1)';
+                }, 200);
+            }
+        }
+
+        // Initialize the enhanced smart home controller when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new EnhancedSmartHomeController();
+        });
+    </script>
+</body>
+</html>
